@@ -1,0 +1,71 @@
+version: '3.9'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  country-api:
+    build:
+      context: .
+      dockerfile: Services/CountryService/Country.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      MessageBroker__Host: amqp://rabbitmq:5672
+      MessageBroker__Username: guest
+      MessageBroker__Password: guest
+    depends_on:
+      - rabbitmq
+    ports:
+      - "5001:8080"
+
+  ip-api:
+    build:
+      context: .
+      dockerfile: Services/IPService/IP.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      MessageBroker__Host: amqp://rabbitmq:5672
+      MessageBroker__Username: guest
+      MessageBroker__Password: guest
+      Downstreams__Country: http://country-api:8080/
+    depends_on:
+      - rabbitmq
+    ports:
+      - "5002:8080"
+
+  log-api:
+    build:
+      context: .
+      dockerfile: Services/LogService/Log.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      MessageBroker__Host: amqp://rabbitmq:5672
+      MessageBroker__Username: guest
+      MessageBroker__Password: guest
+    depends_on:
+      - rabbitmq
+    ports:
+      - "5003:8080"
+
+  gateway-api:
+    build:
+      context: .
+      dockerfile: Services/Gateway/Gateway.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Downstreams__Country: http://country-api:8080/
+      Downstreams__IP: http://ip-api:8080/
+      Downstreams__Log: http://log-api:8080/
+    depends_on:
+      - country-api
+      - ip-api
+      - log-api
+    ports:
+      - "5000:8080"
+
+
