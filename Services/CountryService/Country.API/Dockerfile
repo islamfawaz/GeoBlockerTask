@@ -12,10 +12,10 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Services/Country.API/Country.API.csproj", "Services/Country.API/"]
-RUN dotnet restore "./Services/Country.API/Country.API.csproj"
+COPY ["Services/CountryService/Country.API/Country.API.csproj", "Services/CountryService/Country.API/"]
+RUN dotnet restore "./Services/CountryService/Country.API/Country.API.csproj"
 COPY . .
-WORKDIR "/src/Services/Country.API"
+WORKDIR "/src/Services/CountryService/Country.API"
 RUN dotnet build "./Country.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage

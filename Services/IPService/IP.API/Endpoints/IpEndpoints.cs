@@ -1,6 +1,8 @@
-using BuildingBlocks.Messaging.Contracts;
+﻿using BuildingBlocks.Messaging.Contracts;
 using IP.API.Providers;
 using MassTransit;
+using Microsoft.Extensions.Caching.Memory;
+using System.Net;
 
 namespace IP.API.Endpoints
 {
@@ -18,22 +20,29 @@ namespace IP.API.Endpoints
                 return Results.Ok(new { ip, geo.CountryCode });
             });
 
-            group.MapGet("/check-block", async (HttpContext ctx, IIpGeoProvider provider, IHttpClientFactory http, IPublishEndpoint publisher, IConfiguration cfg) =>
+            group.MapGet("/check-block", async ( HttpContext ctx,  string? testIp, IIpGeoProvider provider, IPublishEndpoint publisher, IMemoryCache cache) =>
             {
-                var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(ip)) return Results.BadRequest(new { error = "Cannot determine caller IP" });
+                var ip = !string.IsNullOrWhiteSpace(testIp)
+                    ? testIp
+                    : ctx.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(ip))
+                    return Results.BadRequest(new { error = "Cannot determine caller IP" });
 
                 var geo = await provider.LookupAsync(ip);
                 var countryCode = geo.CountryCode ?? string.Empty;
 
-                var client = http.CreateClient();
-                client.BaseAddress = new Uri(cfg["Downstreams:Country"] ?? "http://localhost:5001/");
-                var resp = await client.GetAsync($"api/countries/{countryCode}");
-                var isBlocked = resp.IsSuccessStatusCode;
+                
+                var isBlocked = cache.TryGetValue<CountryBlockedIntegrationEvent>(countryCode, out var blockedEvent);
 
-                await publisher.Publish(new BlockedIpAttemptIntegrationEvent(ip, countryCode, DateTime.UtcNow, ctx.Request.Headers.UserAgent.ToString(), isBlocked));
+                await publisher.Publish(new BlockedIpAttemptIntegrationEvent(
+                    ip, countryCode, DateTime.UtcNow,
+                    ctx.Request.Headers.UserAgent.ToString(),
+                    isBlocked));
+
                 return Results.Ok(new { ip, countryCode, isBlocked });
             });
+
 
             return app;
         }

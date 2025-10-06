@@ -44,8 +44,31 @@ namespace Country.API.Controllers
         public async Task<IActionResult> GetByCode([FromRoute] string countryCode)
         {
             var result = await _mediator.Send(new GetCountryByCodeQuery(countryCode));
-            return Ok(result);
+
+            if (result == null)
+                return NotFound(new { message = "Country not found" });
+
+            if (result.BlockedAt != null && (!result.IsTemporary || !result.IsExpired))
+            {
+                return StatusCode(StatusCodes.Status423Locked, new
+                {
+                    result.CountryCode,
+                    result.CountryName,
+                    result.BlockedAt,
+                    result.IsTemporary,
+                    result.ExpiresAt,
+                    message = "Country is blocked"
+                });
+            }
+
+            return Ok(new
+            {
+                result.CountryCode,
+                result.CountryName,
+                message = "Country is allowed"
+            });
         }
+
     }
 }
 
