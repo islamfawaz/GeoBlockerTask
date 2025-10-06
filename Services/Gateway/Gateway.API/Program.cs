@@ -2,9 +2,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHttpClient("country", c => c.BaseAddress = new Uri(builder.Configuration["Downstreams:Country"] ?? "http://localhost:5001/"));
-builder.Services.AddHttpClient("ip", c => c.BaseAddress = new Uri(builder.Configuration["Downstreams:IP"] ?? "http://localhost:5002/"));
-builder.Services.AddHttpClient("log", c => c.BaseAddress = new Uri(builder.Configuration["Downstreams:Log"] ?? "http://localhost:5003/"));
+builder.Services.AddHttpClient("country", c => c.BaseAddress = new Uri(builder.Configuration["Downstreams:Country"] ?? "https://localhost:7298/"));
+builder.Services.AddHttpClient("ip", c => c.BaseAddress = new Uri(builder.Configuration["Downstreams:IP"] ?? "https://localhost:54202/"));
+builder.Services.AddHttpClient("log", c => c.BaseAddress = new Uri(builder.Configuration["Downstreams:Log"] ?? "https://localhost:54206/api/logs/blocked-attempts"));
 
 var app = builder.Build();
 
